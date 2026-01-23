@@ -8,8 +8,10 @@
  *
  *
  */
-
-
+#include "canbus.h"
+#include <stdint.h>
+#include "stm32f0xx_hal.h"
+//#include "stm32f0xx_hal_can.h"
 
 
 	static CAN_HandleTypeDef hcan;
@@ -19,23 +21,23 @@
 
 	volatile uint32_t last_queue_index=0;
 
-	static void CAN_Receive(void);
+//	static void CAN_Receive(void);
 	static void CAN_Config(void);
 
 	void CANbus_Init(void){
 		CANqueue_write_index = CANqueue_read_index=0;
 		collection_active=0;
 		CAN_Config();
-		CAN_Receive();
+//		CAN_Receive();
 	}
 
 	void CAN_EnableCollection(void){
-		colletion_active = 1;
+		collection_active = 1;
 	}
 
 	static void CAN_Config(void){
 		CAN_FilterTypeDef sFilterConfig;
-		static CanRxMsgTypeDef RxMessage;
+//		static CanRxMsgTypeDef RxMessage;
 
 		hcan.Instance = CAN;
 		hcan.Init.Prescaler = 6;
@@ -77,9 +79,12 @@
 
 
 	}
-	//ISR: copy, enqueue, exit; main loop: dequeue, parse, act.
-	void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef *hcan)
+	//ISR: copy, enqueue, exit; main loop: dequeue, parse.
+	void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 			{
+			  CAN_RxHeaderTypeDef RxHeader;
+			  uint8_t RxData[8];
+
 			  uint32_t next_write_index, index;
 			  //next_write_index: where the ring buffer would move if we accept this message
 			  //loop counter for copying payload bytes
@@ -87,6 +92,11 @@
 			  if (collection_active)
 			  //0->ignore all received frames, 1->accept/queue frames
 			  {
+
+				  if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK){
+					  ERROR_CONDITION();
+					  return;
+				  }
 				//compute ring-buffer position, wraps around at end
 			    next_write_index = CANqueue_write_index + 1;
 			    if (CANQUEUE_SIZE == next_write_index)
@@ -95,20 +105,20 @@
 			    //overflow protection: if write pointer overlaps read pointer, then buffer full
 			    if (next_write_index != CANqueue_read_index) /* only write if space left in queue */
 			    {
-			      CANqueue[CANqueue_write_index].Id = hcan->pRxMsg->StdId;
-			      CANqueue[CANqueue_write_index].flags = (CAN_ID_STD == hcan->pRxMsg->IDE) ? 0x01: 0x00;
-			      CANqueue[CANqueue_write_index].DLC = hcan->pRxMsg->DLC;
+			      CANqueue[CANqueue_write_index].Id = RxHeader.StdId;
+			      CANqueue[CANqueue_write_index].flags = (RxHeader.IDE == CAN_ID_STD) ? 0x01: 0x00;
+			      CANqueue[CANqueue_write_index].DLC = RxHeader.DLC;
 
 			      //DLC tells how many bytes are in data bytes
-			      for (index = 0; index < CANqueue[CANqueue_write_index].DLC; index++)
-			        CANqueue[CANqueue_write_index].Data[index] = hcan->pRxMsg->Data[index]; /* ST's CAN driver stores byte data in uint32_t for some unexplained reason */
+			      for (index = 0; index < RxHeader.DLC; index++)
+			        CANqueue[CANqueue_write_index].Data[index] = RxData[index]; /* ST's CAN driver stores byte data in uint32_t for some unexplained reason */
 
 			      last_queue_index = CANqueue_write_index;
 			      CANqueue_write_index = next_write_index;
 			    }
 			  }
 
-			  CAN_Receive();
+//			  CAN_Receive();
 			}
 
 			//Clears the error-interrupt pending flag
@@ -118,10 +128,56 @@
 			  hcan->Instance->MSR = CAN_MSR_ERRI;
 			}
 
-			static void CAN_Receive(void)
-			{
-			  /* request to receive another CAN message */
-			  if (HAL_CAN_Receive_IT(&hcan, CAN_FIFO0) != HAL_OK)
-				  ERROR_CONDITION();
-			}
+			// optional: process messages in main loop
+//			void CANbus_service(void)
+//			{
+//			    while(CANqueue_read_index != CANqueue_write_index)
+//			    {
+//			        struct CANmessage msg = CANqueue[CANqueue_read_index];
+//			        CANqueue_read_index = (CANqueue_read_index + 1) % CANQUEUE_SIZE;
+//
+//			        if(msg.DLC > 0)
+//			                {
+//			                    uint8_t value = msg.Data[0];
+//			                    // handle value
+//			                }
+//			    }
+//			}
+
+			// callback called automatically by HAL when a message arrives in FIFO0
+//			void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+//			{
+//			    CAN_RxHeaderTypeDef RxHeader;
+//			    uint8_t RxData[8];
+//
+//			    // read message from hardware
+//			    if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
+//			        ERROR_CONDITION();
+//
+//			    if(collection_active)
+//			    {
+//			        uint32_t next_write_index = (CANqueue_write_index + 1) % CANQUEUE_SIZE;
+//
+//			        // queue not full
+//			        if(next_write_index != CANqueue_read_index)
+//			        {
+//			            CANqueue[CANqueue_write_index].Id    = RxHeader.StdId;
+//			            CANqueue[CANqueue_write_index].flags = (RxHeader.IDE == CAN_ID_STD) ? 0x01 : 0x00;
+//			            CANqueue[CANqueue_write_index].DLC   = RxHeader.DLC;
+//
+//			            for(uint8_t i = 0; i < RxHeader.DLC; i++)
+//			                CANqueue[CANqueue_write_index].Data[i] = RxData[i];
+//
+//			            last_queue_index = CANqueue_write_index;
+//			            CANqueue_write_index = next_write_index;
+//			        }
+//			    }
+//			}
+
+//			static void CAN_Receive(void)
+//			{
+//			  /* request to receive another CAN message */
+//			  if (HAL_CAN_Receive_IT(hcan, CAN_RX_FIFO0) != HAL_OK)
+//				  ERROR_CONDITION();
+//			}
 

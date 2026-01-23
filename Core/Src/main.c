@@ -62,8 +62,8 @@ uint8_t               RxData[8]; /* Buffer of the received data */
 uint32_t              TxMailbox;  /* The number of the mail box that transmitted the Tx message */
 uint8_t 			  tx;
 uint8_t 			  rx;
-static struct CANmessage CANqueue[CANQUEUE_SIZE];
-static uint32_t CANqueue_write_index;
+//static struct CANmessage CANqueue[CANQUEUE_SIZE];
+//static uint32_t CANqueue_write_index;
 
 /* USER CODE END PV */
 
@@ -71,7 +71,7 @@ static uint32_t CANqueue_write_index;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USB_PCD_Init(void);
-static void MX_CAN_Init(void);
+//static void MX_CAN_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI2_Init(void);
@@ -123,14 +123,16 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USB_PCD_Init();
-  MX_CAN_Init();
+//  MX_CAN_Init();
   MX_SPI1_Init();
   MX_FATFS_Init();
   MX_USART2_UART_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
   CANbus_Init();
+  HAL_CAN_Start(&hcan);
   CAN_EnableCollection();
+//  HAL_CAN_Receive_IT(&hcan, CAN_RX_FIFO0);
 
   /* USER CODE END 2 */
 
@@ -216,33 +218,33 @@ void SystemClock_Config(void)
   * @param None
   * @retval None
   */
-static void MX_CAN_Init(void)
-{
-
-  /* USER CODE BEGIN CAN_Init 0 */
-//	CAN_FilterTypeDef sFilterConfig;
-  /* USER CODE END CAN_Init 0 */
-
-  /* USER CODE BEGIN CAN_Init 1 */
+//static void MX_CAN_Init(void)
+//{
 //
-  /* USER CODE END CAN_Init 1 */
-  hcan.Instance = CAN;
-  hcan.Init.Prescaler = 6;
-  hcan.Init.Mode = CAN_MODE_NORMAL;
-  hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan.Init.TimeSeg1 = CAN_BS1_12TQ;
-  hcan.Init.TimeSeg2 = CAN_BS2_3TQ;
-  hcan.Init.TimeTriggeredMode = DISABLE;
-  hcan.Init.AutoBusOff = DISABLE;
-  hcan.Init.AutoWakeUp = DISABLE;
-  hcan.Init.AutoRetransmission = DISABLE;
-  hcan.Init.ReceiveFifoLocked = DISABLE;
-  hcan.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CAN_Init 2 */
+//  /* USER CODE BEGIN CAN_Init 0 */
+////	CAN_FilterTypeDef sFilterConfig;
+//  /* USER CODE END CAN_Init 0 */
+//
+//  /* USER CODE BEGIN CAN_Init 1 */
+////
+//  /* USER CODE END CAN_Init 1 */
+//  hcan.Instance = CAN;
+//  hcan.Init.Prescaler = 6;
+//  hcan.Init.Mode = CAN_MODE_NORMAL;
+//  hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
+//  hcan.Init.TimeSeg1 = CAN_BS1_12TQ;
+//  hcan.Init.TimeSeg2 = CAN_BS2_3TQ;
+//  hcan.Init.TimeTriggeredMode = DISABLE;
+//  hcan.Init.AutoBusOff = DISABLE;
+//  hcan.Init.AutoWakeUp = DISABLE;
+//  hcan.Init.AutoRetransmission = DISABLE;
+//  hcan.Init.ReceiveFifoLocked = DISABLE;
+//  hcan.Init.TransmitFifoPriority = DISABLE;
+//  if (HAL_CAN_Init(&hcan) != HAL_OK)
+//  {
+//    Error_Handler();
+//  }
+//  /* USER CODE BEGIN CAN_Init 2 */
 //  sFilterConfig.FilterBank = 0;
 //  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
 //  sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
@@ -267,10 +269,10 @@ static void MX_CAN_Init(void)
 //	  //notification error
 //	  Error_Handler();
 //  }
+////
+//  /* USER CODE END CAN_Init 2 */
 //
-  /* USER CODE END CAN_Init 2 */
-
-}
+//}
 
 /**
   * @brief SPI1 Initialization Function
@@ -473,13 +475,13 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-  void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *CanHandle){
-	  //get RX message
-	  if(HAL_CAN_GetRxMessage(CanHandle, CAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK){
-		  //reception error
-		  Error_Handler();
-	  }
-  }
+//  void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *CanHandle){
+//	  //get RX message
+//	  if(HAL_CAN_GetRxMessage(CanHandle, CAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK){
+//		  //reception error
+//		  Error_Handler();
+//	  }
+//  }
 
 
 
